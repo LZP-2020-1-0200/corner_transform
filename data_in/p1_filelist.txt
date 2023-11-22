@@ -1,0 +1,15 @@
+data_in\sturi_P1\14092023_1p
+data_in\sturi_P1\1sturis.jpg
+data_in\sturi_P1\2sturis.jpg
+data_in\sturi_P1\3sturis.jpg
+data_in\sturi_P1\anchors
+data_in\sturi_P1\p_koordinates.txt
+data_in\sturi_P1\session.json
+data_in\sturi_P1\sturi.txt
+data_in\sturi_P1\14092023_1p\krApaksejais.jpg
+data_in\sturi_P1\14092023_1p\krAugsejais.jpg
+data_in\sturi_P1\14092023_1p\labApaksejais.jpg
+data_in\sturi_P1\14092023_1p\sturi1p.txt
+data_in\sturi_P1\anchors\anchor1.jpg
+data_in\sturi_P1\anchors\anchor2.jpg
+data_in\sturi_P1\anchors\anchor3.jpg
