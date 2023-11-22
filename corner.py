@@ -179,4 +179,4 @@ plt.close()
 
 
 check_output(
-        f"pdftk {OUTFOLDER}\\100*.pdf cat output transform_p1.pdf", shell=True).decode()
+        f"pdftk {OUTFOLDER}\\100*.pdf cat output {OUTFOLDER}\\transform_p1.pdf", shell=True).decode()
