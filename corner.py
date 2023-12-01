@@ -5,7 +5,7 @@ import os.path
 import re
 from subprocess import check_output
 from coordinate import Coordinate
-from double_translation import merge_coordinate
+from double_translation import calc_points
 
 with open("data_in/p1_filelist.txt", 'r') as ListFile:
     ListFileLines = ListFile.readlines()
@@ -295,14 +295,18 @@ ax_mapf.set_title("punkti kartē")
 
 ax_mapf.invert_xaxis()
 plt.tight_layout()
-#plt.show()
+# plt.show()
 plt.savefig(f"{OUTFOLDER}/10040redo.pdf", dpi=300)
 plt.close()
 
+rezultat = {}
+for m in range(len(bio_point_filename)):
+    rezultat[bio_point_filename[m]] = {
+        "x": t2_bio_point_x[m], "y": t2_bio_point_y[m],
+        "z": t2_bio_point_x[m]*(-7.814452e-02)+t2_bio_point_y[m]*(1.237864e-03)+(4.376328e+03)}
 
-
-#bio_point_filename
-
+with open(f"{OUTFOLDER}/biezumi_p1.json", 'w') as f:
+    json.dump(rezultat, f,indent=4)
 
 check_output(
     f"pdftk {OUTFOLDER}\\100*.pdf cat output transform_p1.pdf", shell=True).decode()
