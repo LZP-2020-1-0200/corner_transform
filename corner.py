@@ -4,6 +4,8 @@ import matplotlib.image as mpimg
 import os.path
 import re
 from subprocess import check_output
+from coordinate import Coordinate
+from double_translation import merge_coordinate
 
 with open("data_in/p1_filelist.txt", 'r') as ListFile:
     ListFileLines = ListFile.readlines()
@@ -100,10 +102,13 @@ ax_map.plot(bio_anchors_x, bio_anchors_y, label='anchors')
 
 
 bio_points = bio_session_json_object['points']
-bio_point_x, bio_point_y = [], []
+bio_point_x, bio_point_y, bio_point_filename = [], [], []
+
+
 for bio_point in bio_points:
     bio_point_x.append(bio_point['x'])
     bio_point_y.append(bio_point['y'])
+    bio_point_filename.append(bio_point['filename'])
 
 ax_map.plot(bio_point_x, bio_point_y, '.', label='points')
 
@@ -192,7 +197,28 @@ redo_enc_x = (56576, 65556, 65531)
 redo_enc_y = (31973, 32220, 23501)
 
 
-fig, ((ax_png, ax_enc), (ax_oldenc, ax_l_apak)) = plt.subplots(2, 2)
+def abcdef(x, y, x_prim, y_prim):
+    x0, x1, x2 = x[0], x[1], x[2]
+    y0, y1, y2 = y[0], y[1], y[2]
+    x0prim, x1prim, x2prim = x_prim[0], x_prim[1], x_prim[2]
+    y0prim, y1prim, y2prim = y_prim[0], y_prim[1], y_prim[2]
+
+    a = (x0prim*(y2-y1)-x1prim*y2+x2prim*y1+(x1prim-x2prim)*y0) / \
+        (x0*(y2-y1)-x1*y2+x2*y1+(x1-x2)*y0)
+    b = (x0*(x2prim-x1prim)-x1*x2prim+x1prim*x2+x0prim*(x1-x2)) / \
+        (x0*(y2-y1)-x1*y2+x2*y1+(x1-x2)*y0)
+    c = - ((x0*(x2prim*y1-x1prim*y2)+x0prim*(x1*y2-x2*y1) +
+           (x1prim*x2-x1*x2prim)*y0)/(x0*(y2-y1)-x1*y2+x2*y1+(x1-x2)*y0))
+    d = (y1*y2prim+y0*(y1prim-y2prim)+y0prim*(y2-y1) -
+         y1prim*y2)/(x0*(y2-y1)-x1*y2+x2*y1+(x1-x2)*y0)
+    e = - ((x1*y2prim+x0*(y1prim-y2prim)-x2*y1prim+(x2-x1)
+           * y0prim)/(x0*(y2-y1)-x1*y2+x2*y1+(x1-x2)*y0))
+    f = (x0*(y1prim*y2-y1*y2prim)+y0*(x1*y2prim-x2*y1prim) +
+         y0prim*(x2*y1-x1*y2))/(x0*(y2-y1)-x1*y2+x2*y1+(x1-x2)*y0)
+    return (a, b, c, d, e, f)
+
+
+fig, ((ax_png, ax_enc), (ax_oldenc, ax_mapf)) = plt.subplots(2, 2)
 #axs = (ax_k_apak, ax_k_aug, ax_l_apak)
 ax_enc.invert_xaxis()
 
@@ -206,14 +232,77 @@ ax_enc.plot(redo_corners_x, redo_corners_y)
 for m in range(len(redo_corners_abc)):
     ax_enc.text(redo_corners_x[m], redo_corners_y[m], redo_corners_abc[m])
 ax_enc.plot(redo_enc_x, redo_enc_y)
+ax_enc.set_title("pārmērīti enkuri")
+
+
+T1 = abcdef(bio_anchors_x, bio_anchors_y, redo_enc_x, redo_enc_y)
+
+t1_bio_anch_x = []
+t1_bio_anch_y = []
+
+for m in range(len(bio_anchors_x)):
+    t1_bio_anch_x.append(bio_anchors_x[m]*T1[0]+bio_anchors_y[m]*T1[1]+T1[2])
+    t1_bio_anch_y.append(bio_anchors_x[m]*T1[3]+bio_anchors_y[m]*T1[4]+T1[5])
+
+
+t1_bio_point_x = []
+t1_bio_point_y = []
+for m in range(len(bio_point_x)):
+    t1_bio_point_x.append(bio_point_x[m]*T1[0]+bio_point_y[m]*T1[1]+T1[2])
+    t1_bio_point_y.append(bio_point_x[m]*T1[3]+bio_point_y[m]*T1[4]+T1[5])
+
+#    old_xy=Coordinate(bio_point_x[m],bio_point_y[m])
+#    new_xy=merge_coordinate(bio_anchors_x,bio_anchors_y)
+#T1 = abcdef(bio_anchors_x, bio_anchors_y, redo_enc_x, redo_enc_y)
+
+
+x_reverse = []
+y_reverse = []
+for m in {2, 1, 0}:
+    x_reverse.append(redo_corners_x[m])
+    y_reverse.append(redo_corners_y[m])
+
+T2 = abcdef(x_reverse, y_reverse, map_corners_x, map_corners_y)
+t2_anch_x = []
+t2_anch_y = []
+for m in range(len(redo_enc_x)):
+    t2_anch_x.append(redo_enc_x[m]*T2[0]+redo_enc_y[m]*T2[1]+T2[2])
+    t2_anch_y.append(redo_enc_x[m]*T2[3]+redo_enc_y[m]*T2[4]+T2[5])
+
+t2_bio_point_x = []
+t2_bio_point_y = []
+
+for m in range(len(t1_bio_point_x)):
+    t2_bio_point_x.append(
+        t1_bio_point_x[m]*T2[0]+t1_bio_point_y[m]*T2[1]+T2[2])
+    t2_bio_point_y.append(
+        t1_bio_point_x[m]*T2[3]+t1_bio_point_y[m]*T2[4]+T2[5])
+
 
 ax_oldenc.invert_xaxis()
 ax_oldenc.plot(redo_corners_x, redo_corners_y)
-ax_oldenc.plot(bio_anchors_x, bio_anchors_y, label='anchors')
-ax_oldenc.axis('equal')
+#ax_oldenc.plot(bio_anchors_x, bio_anchors_y, label='anchors')
+ax_oldenc.plot(t1_bio_anch_x, t1_bio_anch_y, label='Tanchors')
+ax_oldenc.plot(t1_bio_point_x, t1_bio_point_y, '.', label='points')
 
+ax_oldenc.axis('equal')
+ax_oldenc.set_title("pārcelti enkuri")
+
+ax_mapf.plot(map_corners_x, map_corners_y)
+ax_mapf.plot(t2_anch_x, t2_anch_y)
+ax_mapf.plot(t2_bio_point_x, t2_bio_point_y, '.', label='points')
+ax_mapf.set_title("punkti kartē")
+
+ax_mapf.invert_xaxis()
 plt.tight_layout()
-plt.show()
+#plt.show()
+plt.savefig(f"{OUTFOLDER}/10040redo.pdf", dpi=300)
+plt.close()
+
+
+
+#bio_point_filename
+
 
 check_output(
     f"pdftk {OUTFOLDER}\\100*.pdf cat output transform_p1.pdf", shell=True).decode()
