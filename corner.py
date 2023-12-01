@@ -125,8 +125,8 @@ plt.tight_layout()
 plt.savefig(f"{OUTFOLDER}/10020enkuri.pdf", dpi=300)
 plt.close()
 
-fig, ((ax_k_aug,ax_map), (ax_k_apak, ax_l_apak)) = plt.subplots(2, 2)
-axs = (ax_k_apak,ax_k_aug,ax_l_apak  )
+fig, ((ax_k_aug, ax_map), (ax_k_apak, ax_l_apak)) = plt.subplots(2, 2)
+axs = (ax_k_apak, ax_k_aug, ax_l_apak)
 ax_map.invert_xaxis()
 
 with open(map_corners_file_name, 'r') as map_corners_file:
@@ -171,12 +171,49 @@ for axn in range(len(axs)):
     ax.set_title(os.path.basename(map_corner_jpg[axn]))
 
 
-
 plt.tight_layout()
-#plt.show()
+# plt.show()
 plt.savefig(f"{OUTFOLDER}/10030karte.pdf", dpi=300)
 plt.close()
 
 
+# Stūri	A	56202	32511
+# C	66232	22823
+# B	56376	22724
+# Enkuri	1	56576	31973
+# 2	65556	32220
+# 3	65531	23501
+
+redo_corners_x = (56202, 56376, 66232)
+redo_corners_y = (32511, 22724, 22823)
+redo_corners_abc = ("A", "B", "C")
+
+redo_enc_x = (56576, 65556, 65531)
+redo_enc_y = (31973, 32220, 23501)
+
+
+fig, ((ax_png, ax_enc), (ax_oldenc, ax_l_apak)) = plt.subplots(2, 2)
+#axs = (ax_k_apak, ax_k_aug, ax_l_apak)
+ax_enc.invert_xaxis()
+
+original_png = mpimg.imread("data_in/thumbnail_image.png")
+ax_png.imshow(original_png)
+ax_png.axis('off')
+ax_png.set_title("Atkārtojums")
+
+
+ax_enc.plot(redo_corners_x, redo_corners_y)
+for m in range(len(redo_corners_abc)):
+    ax_enc.text(redo_corners_x[m], redo_corners_y[m], redo_corners_abc[m])
+ax_enc.plot(redo_enc_x, redo_enc_y)
+
+ax_oldenc.invert_xaxis()
+ax_oldenc.plot(redo_corners_x, redo_corners_y)
+ax_oldenc.plot(bio_anchors_x, bio_anchors_y, label='anchors')
+ax_oldenc.axis('equal')
+
+plt.tight_layout()
+plt.show()
+
 check_output(
-        f"pdftk {OUTFOLDER}\\100*.pdf cat output {OUTFOLDER}\\transform_p1.pdf", shell=True).decode()
+    f"pdftk {OUTFOLDER}\\100*.pdf cat output transform_p1.pdf", shell=True).decode()
