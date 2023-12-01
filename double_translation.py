@@ -1,130 +1,105 @@
-from coordinate import Coordinate
-from translator import anchor_translate, gaussian_elimination2d
 import numpy as np
 
 
-def merge_coordinate(
-    A_space_base: [Coordinate, Coordinate, Coordinate],
-    B_space_base: [Coordinate, Coordinate, Coordinate],
-    transition_space_base_A: [Coordinate, Coordinate, Coordinate],
-    transition_space_base_B: [Coordinate, Coordinate, Coordinate],
-    base_A_point: Coordinate,
+def transition_matrix(
+    base_in_A_space_coordinates: np.ndarray,  # [A, B, C]
+    base_in_B_space_coordinates: np.ndarray,  # [A, B, C]
 ):
-    """base_A_point is a coordinate in the A space
-    then it is translated to the transition space,
-    and then via the transition space, it is translated to base B,
-    and finally converted to the B space
-    """
-    # translate to transition space
-
-    transition_space_point: Coordinate = anchor_translate(
-        transition_space_base_A,
-        A_space_base,
-        base_A_point
-    )
-
-    # translate to base B
-    base_B_point: Coordinate = anchor_translate(
-        B_space_base,
-        transition_space_base_B,
-        transition_space_point
-    )
-
-    return base_B_point
+    """Returns a transition matrix from A space to B space"""
+    pass
 
 
-if __name__ == '__main__':
-    # same bases
-    A_space_base = [Coordinate(0, 0), Coordinate(0, 10), Coordinate(10, 0)]
-    B_space_base = [Coordinate(0, 0), Coordinate(0, 10), Coordinate(10, 0)]
-    transition_space_base_A = [Coordinate(
-        0, 0), Coordinate(0, 10), Coordinate(10, 0)]
-    transition_space_base_B = [Coordinate(
-        0, 0), Coordinate(0, 10), Coordinate(10, 0)]
-    space_A_point = Coordinate(5, 5)
-    base_B_point = merge_coordinate(
-        A_space_base,
-        B_space_base,
-        transition_space_base_A,
-        transition_space_base_B,
-        space_A_point
-    )
-    assert np.all(np.isclose(space_A_point.tuple,
-                  base_B_point.tuple))  # type: ignore
-
-    # different bases
-    A_space_base = [Coordinate(0, 0), Coordinate(0, 10), Coordinate(10, 0)]
-    space_A_point = Coordinate(5, 5)
-    # in A base, base_A_point should be (0.5,0.5)
-    temp = gaussian_elimination2d(np.array([
+def coords_to_base(arr):
+    return np.array([
         [
-            A_space_base[1].x - A_space_base[0].x,
-            A_space_base[2].x - A_space_base[0].x,
-            space_A_point.x],
+                    arr[1, 0] - arr[0, 0],
+                    arr[2, 0] - arr[0, 0],
+                    arr[0, 0]
+                    ],
         [
-            A_space_base[1].y - A_space_base[0].y,
-            A_space_base[2].y - A_space_base[0].y,
-            space_A_point.y
+            arr[1, 1] - arr[0, 1],
+            arr[2, 1] - arr[0, 1],
+            arr[0, 1]
+        ],
+        [
+            0, 0, 1
         ]
-    ]))
-    print(temp)
-    assert np.all(np.isclose(temp, (0.5, 0.5)))  # type: ignore
+    ], dtype=np.float64)
 
-    transition_space_base_A = [
-        Coordinate(-2, 7), Coordinate(5, 12), Coordinate(1, 6)]
-    # in transition space, base_A_point should be (3, 9)
 
-    temp = Coordinate(
-        transition_space_base_A[0].x + 0.5 * (transition_space_base_A[1].x - transition_space_base_A[0].x) + 0.5 * (
-            transition_space_base_A[2].x - transition_space_base_A[0].x),
-        transition_space_base_A[0].y + 0.5 * (transition_space_base_A[1].y - transition_space_base_A[0].y) + 0.5 * (
-            transition_space_base_A[2].y - transition_space_base_A[0].y)
+def precalc_bases(
+    base_in_A_space_coordinates: np.ndarray,  # [A, B, C]
+    base_in_B_space_coordinates: np.ndarray,  # [A, B, C]
+    base_in_transition_space_A_coordinates: np.ndarray,  # [A, B, C]
+    base_in_transition_space_B_coordinates: np.ndarray,  # [A, B, C]
+):
+    """Returns a transition matrix from A space to B space"""
+    # p_B = b_B @ p_b_B = b_B @ inverse(t_B) @ t_A @ p_b_A = b_B @ inverse(t_B) @ t_A @ inverse(b_A) @ p_A
+    return base_in_B_space_coordinates @ np.linalg.inv(base_in_transition_space_B_coordinates) @ base_in_transition_space_A_coordinates @ np.linalg.inv(base_in_A_space_coordinates)
+
+
+def calc_points(
+    base_in_A_space_coordinates: np.ndarray,  # [A, B, C]
+    base_in_B_space_coordinates: np.ndarray,  # [A, B, C]
+    base_in_transition_space_A_coordinates: np.ndarray,  # [A, B, C]
+    base_in_transition_space_B_coordinates: np.ndarray,  # [A, B, C]
+    points_in_A_space_coordinates: np.ndarray,  # list of points in A space
+):
+    base_in_A_space_coordinates = coords_to_base(base_in_A_space_coordinates)
+    base_in_B_space_coordinates = coords_to_base(base_in_B_space_coordinates)
+    base_in_transition_space_A_coordinates = coords_to_base(
+        base_in_transition_space_A_coordinates)
+    base_in_transition_space_B_coordinates = coords_to_base(
+        base_in_transition_space_B_coordinates)
+    precalc = precalc_bases(
+        base_in_A_space_coordinates,
+        base_in_B_space_coordinates,
+        base_in_transition_space_A_coordinates,
+        base_in_transition_space_B_coordinates,
     )
-    print(temp)
-    assert np.all(np.isclose(temp.tuple, (3, 9)))  # type: ignore
+    # turn all [x,y] into [x,y,1]
+    points_in_A_space_coordinates = np.hstack(
+        (points_in_A_space_coordinates, np.ones((points_in_A_space_coordinates.shape[0], 1))))
+    # p_B = precalc @ solve(b_A, p_A)
 
-    temp = anchor_translate(transition_space_base_A,
-                            A_space_base, space_A_point)
-    print(temp)
-    assert np.all(np.isclose(temp.tuple, (3, 9)))  # type: ignore
-    transition_space_base_B = [Coordinate(
-        0, 0), Coordinate(0, 10), Coordinate(10, 0)]
-    B_space_base = [Coordinate(0, 0), Coordinate(0, 10), Coordinate(10, 0)]
+    return (precalc @ points_in_A_space_coordinates.T)[:2].reshape(-1)
+
+
+if __name__ == "__main__":
+    # different bases
+    A_space_base = np.array([[0, 0], [0, 10], [10, 0]], dtype=np.float64)
+    space_A_point = np.array([5, 5], dtype=np.float64)
+    transition_space_base_A = np.array(
+        [[-2, 7], [5, 12], [1, 6]], dtype=np.float64)
+    transition_space_base_B = np.array(
+        [[0, 0], [0, 10], [10, 0]], dtype=np.float64)
+    B_space_base = np.array([[1, 1], [1, 12], [12, 1]], dtype=np.float64)
     # in B base, base_A_point should be (0.3, 0.9)
-    # in B space, base_A_point should be (3, 9)
-    base_B_point = merge_coordinate(
-        A_space_base,
-        B_space_base,
-        transition_space_base_A,
-        transition_space_base_B,
-        space_A_point
-    )
+    # in B space, base_A_point should be (3.3, 9.9)
+    base_B_point = calc_points(A_space_base, B_space_base, transition_space_base_A,
+                               transition_space_base_B, space_A_point.reshape(1, 2))
     print(base_B_point)
-    assert np.all(np.isclose(base_B_point.tuple, (3, 9)))  # type: ignore
+    assert np.all(np.isclose(base_B_point, [4.3, 10.9]))  # type: ignore
+    # b_A - base in A space (given)
+    # b_B - base in B space (given)
+    # t_A - A base in transition space (given)
+    # t_B - B base in transition space (given)
+    # p_A - point in A space (given)
+    # p_B - point in B space (needed)
+    # p_t - point in transition space
+    # p_b_A - point in base in A space
+    # p_b_B - point in base in B space
 
-    # back and forth
-    A_space_base = [Coordinate(
-        15, -23), Coordinate(18, -22), Coordinate(14, -22)]
-    space_A_point = Coordinate(7, 5)
-    transition_space_base_A = [
-        Coordinate(-1, 2), Coordinate(-9, 10), Coordinate(11, 0)]
-    B_space_base = [Coordinate(-1, 9), Coordinate(-3, 10), Coordinate(2, 8)]
-    transition_space_base_B = [Coordinate(
-        0, 21), Coordinate(0, 10), Coordinate(10, 0)]
-    base_B_point = merge_coordinate(
-        A_space_base,
-        B_space_base,
-        transition_space_base_A,
-        transition_space_base_B,
-        space_A_point
-    )
-    print(base_B_point)
-    space_A_point2 = merge_coordinate(
-        B_space_base,
-        A_space_base,
-        transition_space_base_B,
-        transition_space_base_A,
-        base_B_point
-    )
-    assert np.all(np.isclose(space_A_point.tuple,
-                  space_A_point2.tuple))  # type: ignore
+    # b_A @ p_b_A = p_A
+    # p_b_A = inverse(b_A) @ p_A
+
+    # p_b_A = solve(b_A, p_A)
+    # p_t = t_A @ p_b_A
+    # p_b_B = solve(t_B, p_t)
+    # p_B = b_B @ p_b_B
+
+    # t_A @ p_b_A = p_t
+    # t_B @ p_b_B = p_t
+    # t_A @ p_b_A = t_B @ p_b_B
+    # p_b_B = inverse(t_B) @ t_A @ p_b_A
+    # p_B = b_B @ p_b_B = b_B @ inverse(t_B) @ t_A @ p_b_A = b_B @ inverse(t_B) @ t_A @ inverse(b_A) @ p_A
